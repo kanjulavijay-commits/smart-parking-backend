@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Django
+*.sqlite3
+media/
+staticfiles/
+
+# Environment variables — NEVER commit this
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AI models (large files)
+*.h5
+*.pt
+*.pth
+*.pkl
+*.onnx
+
+# Tool-specific (Claude Code, ruflo, claude-flow)
+.claude/
+.claude-flow/
+.swarm/
+.mcp.json
+
+# Database files
+*.db
+ruvector.db
