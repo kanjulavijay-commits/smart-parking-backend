@@ -77,11 +77,11 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 
 # ── Database — Supabase PostgreSQL ────────────────────────────
-_db_url = os.getenv("DATABASE_URL", "")
+_db_url = os.getenv("DATABASE_URL", "").replace("?pgbouncer=true", "")
 if _db_url and not _db_url.startswith("postgresql://postgres:[YOUR"):
     DATABASES = {
-        "default": dj_database_url.config(
-            default=_db_url,
+        "default": dj_database_url.parse(
+            _db_url,
             conn_max_age=600,
             ssl_require=not DEBUG,
         )
