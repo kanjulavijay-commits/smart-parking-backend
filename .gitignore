@@ -46,3 +46,14 @@ Thumbs.db
 # Database files
 *.db
 ruvector.db
+
+# Large AI datasets (1GB+) — store on cloud storage, not git
+data_library/
+dataset/
+ai_engine/data/
+
+# Scratch / working files
+scratch/
+
+# AI model checkpoints (large binary files)
+ai_engine/checkpoints/

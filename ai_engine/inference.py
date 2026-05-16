@@ -59,42 +59,56 @@ def _img_to_tensor(img_array):
     return _INFERENCE_TRANSFORM(pil_img).unsqueeze(0)  # add batch dim
 
 
-def predict_slot_occupancy(img_array, checkpoint_path=None, threshold=0.5):
+def predict_slot_occupancy(img_array, checkpoint_path=None, threshold=0.5, include_comparison=False):
     """
     Predict whether a single slot image is occupied or vacant.
-
-    Args:
-        img_array: numpy RGB array of the slot (already cropped)
-        checkpoint_path: path to .pth model file (None = use untrained model)
-        threshold: probability threshold for "occupied"
-
-    Returns:
-        dict: { "is_occupied": bool, "confidence": float }
     """
-    model = get_model(checkpoint_path)
+    import joblib
+    
+    # 1. CNN Prediction
+    model_cnn = get_model(checkpoint_path)
     tensor = _img_to_tensor(img_array)
-
     with torch.no_grad():
-        prob = torch.sigmoid(model(tensor)).item()
-
-    return {
-        "is_occupied": prob >= threshold,
-        "confidence": round(prob if prob >= threshold else 1 - prob, 4),
-        "raw_probability": round(prob, 4),
+        prob_cnn = torch.sigmoid(model_cnn(tensor)).item()
+    
+    result = {
+        "is_occupied": prob_cnn >= threshold,
+        "confidence": round(prob_cnn if prob_cnn >= threshold else 1 - prob_cnn, 4),
+        "raw_probability": round(prob_cnn, 4),
+        "model": "cnn"
     }
 
+    # 2. Add comparison if requested
+    if include_comparison:
+        # Prep for ML models
+        img_gray = Image.fromarray(img_array).convert('L').resize((64, 64))
+        X = np.array(img_gray).flatten().reshape(1, -1)
+        
+        comparison = {"cnn": result["is_occupied"]}
+        
+        # SVM
+        try:
+            svm_data = joblib.load("ai_engine/checkpoints/svm_model.joblib")
+            X_scaled = svm_data["scaler"].transform(X)
+            comparison["svm"] = bool(svm_data["model"].predict(X_scaled)[0])
+        except Exception:
+            comparison["svm"] = None
+            
+        # Random Forest
+        try:
+            rf_model = joblib.load("ai_engine/checkpoints/rf_model.joblib")
+            comparison["rf"] = bool(rf_model.predict(X)[0])
+        except Exception:
+            comparison["rf"] = None
+            
+        result["comparison"] = comparison
 
-def analyze_camera_frame(frame_bytes, slot_coordinates, checkpoint_path=None):
+    return result
+
+
+def analyze_camera_frame(frame_bytes, slot_coordinates, checkpoint_path=None, include_comparison=False):
     """
     Full pipeline: decode a camera frame, analyze all slots in it.
-
-    Args:
-        frame_bytes: raw JPEG/PNG bytes from camera
-        slot_coordinates: list of dicts [{ "slot_id": str, "x", "y", "w", "h" }]
-        checkpoint_path: path to trained model
-
-    Returns:
-        list of dicts: [{ "slot_id", "is_occupied", "confidence", "raw_probability" }]
     """
     frame = preprocess_camera_frame(frame_bytes)
     if frame is None:
@@ -108,14 +122,18 @@ def analyze_camera_frame(frame_bytes, slot_coordinates, checkpoint_path=None):
 
         import cv2
         roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
-        prediction = predict_slot_occupancy(roi_rgb, checkpoint_path)
+        prediction = predict_slot_occupancy(
+            roi_rgb, 
+            checkpoint_path, 
+            include_comparison=include_comparison
+        )
         prediction["slot_id"] = coord["slot_id"]
         results.append(prediction)
 
     return results
 
 
-def sync_slot_statuses(camera_id, frame_bytes, checkpoint_path=None):
+def sync_slot_statuses(camera_id, frame_bytes, checkpoint_path=None, include_comparison=False):
     """
     High-level function: analyze a camera frame and update ParkingSlot DB records.
     Called from the API view when a camera posts a new frame.
@@ -149,7 +167,7 @@ def sync_slot_statuses(camera_id, frame_bytes, checkpoint_path=None):
         for s in slots
     ]
 
-    results = analyze_camera_frame(frame_bytes, slot_coords, checkpoint_path)
+    results = analyze_camera_frame(frame_bytes, slot_coords, checkpoint_path, include_comparison=include_comparison)
 
     updated = 0
     for r in results:

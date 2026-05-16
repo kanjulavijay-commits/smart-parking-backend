@@ -6,14 +6,19 @@ from .models import (
 
 
 class ParkingSlotSerializer(serializers.ModelSerializer):
+    slot_type = serializers.SerializerMethodField()
+
     class Meta:
         model = ParkingSlot
         fields = [
-            "id", "zone", "slot_number", "size", "status",
+            "id", "zone", "slot_number", "size", "slot_type", "status",
             "has_ev_charger", "is_active", "floor_position_x", "floor_position_y",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def get_slot_type(self, obj):
+        return obj.zone.zone_type
 
 
 class ParkingZoneSerializer(serializers.ModelSerializer):
@@ -58,16 +63,24 @@ class ParkingLotSerializer(serializers.ModelSerializer):
 
 class ParkingLotListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing lots without nested data."""
-    available_count = serializers.SerializerMethodField()
+    available_slots = serializers.SerializerMethodField()
+    base_hourly_rate = serializers.SerializerMethodField()
 
     class Meta:
         model = ParkingLot
-        fields = ["id", "name", "city", "total_capacity", "is_active", "available_count"]
+        fields = [
+            "id", "name", "address", "city", "total_capacity",
+            "is_active", "available_slots", "base_hourly_rate",
+        ]
 
-    def get_available_count(self, obj):
+    def get_available_slots(self, obj):
         return ParkingSlot.objects.filter(
             zone__floor__lot=obj, status="available", is_active=True
         ).count()
+
+    def get_base_hourly_rate(self, obj):
+        rule = obj.pricing_rules.filter(pricing_type="hourly", is_active=True).order_by("base_price").first()
+        return str(rule.base_price) if rule else "0.00"
 
 
 class VehicleSerializer(serializers.ModelSerializer):

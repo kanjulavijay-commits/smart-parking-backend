@@ -223,10 +223,16 @@ class ParkingZoneViewSet(viewsets.ModelViewSet):
 
 
 class ParkingSlotViewSet(viewsets.ModelViewSet):
-    queryset = ParkingSlot.objects.select_related("zone__floor__lot").all()
     serializer_class = ParkingSlotSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["status", "size", "has_ev_charger", "zone"]
+
+    def get_queryset(self):
+        qs = ParkingSlot.objects.select_related("zone__floor__lot").all()
+        lot_id = self.request.query_params.get("lot")
+        if lot_id:
+            qs = qs.filter(zone__floor__lot_id=lot_id)
+        return qs
 
     def get_permissions(self):
         if self.action in ["create", "update", "partial_update", "destroy"]:
