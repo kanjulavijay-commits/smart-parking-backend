@@ -18,6 +18,13 @@ SECRET_KEY = os.getenv("SECRET_KEY", "insecure-dev-key-change-in-production")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+# Auto-add cloud platform hostnames so no env var is needed
+_render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME")          # Render sets this automatically
+_railway_host = os.getenv("RAILWAY_PUBLIC_DOMAIN")            # Railway sets this automatically
+for _h in [_render_host, _railway_host]:
+    if _h and _h not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_h)
+
 # ── Installed Apps ────────────────────────────────────────────
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -135,6 +142,8 @@ SIMPLE_JWT = {
 _cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(",") if o.strip()]
 CORS_ALLOW_CREDENTIALS = True
+# Allow all Vercel preview and production deployments
+CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\.vercel\.app$"]
 
 # ── Supabase ──────────────────────────────────────────────────
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
