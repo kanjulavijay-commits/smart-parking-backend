@@ -1,9 +1,12 @@
+import os
+
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from django.utils import timezone
+from django.db.models import Q
 from .models import AIRecommendation
 from .serializers import AIRecommendationSerializer
 from .recommender import recommend_slot, recommend_time
@@ -283,8 +286,8 @@ class AIStatsView(APIView):
         recs = AIRecommendation.objects.all()
         stats = recs.aggregate(
             total=Count("id"),
-            accepted=Count("id", filter=__import__("django.db.models", fromlist=["Q"]).Q(was_accepted=True)),
-            rejected=Count("id", filter=__import__("django.db.models", fromlist=["Q"]).Q(was_accepted=False)),
+            accepted=Count("id", filter=Q(was_accepted=True)),
+            rejected=Count("id", filter=Q(was_accepted=False)),
             avg_confidence=Avg("confidence"),
         )
         acceptance_rate = (
@@ -530,11 +533,34 @@ class DatasetStatusView(APIView):
         models = {}
         for key, path in checkpoints.items():
             exists = os.path.exists(path)
-            models[key] = {
-                "trained":   exists,
-                "path":      path,
-                "size_kb":   round(os.path.getsize(path) / 1024, 1) if exists else None,
+            entry = {
+                "trained":    exists,
+                "path":       path,
+                "size_kb":    round(os.path.getsize(path) / 1024, 1) if exists else None,
+                "val_accuracy": None,
             }
+            if exists:
+                try:
+                    if key == "cnn":
+                        import torch
+                        ckpt = torch.load(path, map_location="cpu")
+                        entry["val_accuracy"] = round(ckpt.get("val_accuracy", 0) * 100, 1)
+                        entry["epoch"] = ckpt.get("epoch")
+                    elif key == "random_forest":
+                        import pickle
+                        with open(path, "rb") as f:
+                            data = pickle.load(f)
+                        entry["val_accuracy"] = (
+                            round(data.get("val_accuracy", 0) * 100, 1)
+                            if data.get("val_accuracy") is not None else None
+                        )
+                        entry["train_accuracy"] = (
+                            round(data.get("train_accuracy", 0) * 100, 1)
+                            if data.get("train_accuracy") is not None else None
+                        )
+                except Exception:
+                    pass
+            models[key] = entry
 
         return Response({
             "datasets":        datasets,

@@ -30,13 +30,6 @@ staticfiles/
 .DS_Store
 Thumbs.db
 
-# AI models (large files)
-*.h5
-*.pt
-*.pth
-*.pkl
-*.onnx
-
 # Tool-specific (Claude Code, ruflo, claude-flow)
 .claude/
 .claude-flow/
@@ -55,5 +48,5 @@ ai_engine/data/
 # Scratch / working files
 scratch/
 
-# AI model checkpoints (large binary files)
-ai_engine/checkpoints/
+# Duplicate/accidental nested project
+backend/
