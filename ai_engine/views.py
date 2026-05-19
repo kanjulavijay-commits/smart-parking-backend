@@ -10,7 +10,8 @@ from django.db.models import Q
 from .models import AIRecommendation
 from .serializers import AIRecommendationSerializer
 from .recommender import recommend_slot, recommend_time
-from .inference import sync_slot_statuses, predict_slot_occupancy
+# inference imports torch/torchvision — lazy-import inside each view
+# so PyTorch is NOT loaded at Django startup (saves ~400 MB RAM on Render free tier)
 
 
 class AIRecommendationViewSet(viewsets.ModelViewSet):
@@ -158,9 +159,10 @@ class CameraInferenceView(APIView):
         include_comparison = request.data.get("include_comparison") == "true" or request.GET.get("comparison") == "true"
 
         try:
+            from .inference import sync_slot_statuses
             result = sync_slot_statuses(
-                camera_id, 
-                frame_bytes, 
+                camera_id,
+                frame_bytes,
                 checkpoint_path=checkpoint,
                 include_comparison=include_comparison
             )
@@ -201,6 +203,7 @@ class SingleSlotInferenceView(APIView):
             return Response({"error": "Cannot decode image file."}, status=400)
 
         checkpoint = request.data.get("checkpoint", "ai_engine/checkpoints/best_model.pth")
+        from .inference import predict_slot_occupancy
         result = predict_slot_occupancy(img_array, checkpoint_path=checkpoint)
 
         return Response({
@@ -257,6 +260,7 @@ class MockCameraAnalysisView(APIView):
             img_array = np.array(pil_img)
             
             # Run the 3-model comparison!
+            from .inference import predict_slot_occupancy
             prediction = predict_slot_occupancy(img_array, include_comparison=True)
             prediction["slot_id"] = str(slot.id)
             prediction["slot_number"] = slot.slot_number
