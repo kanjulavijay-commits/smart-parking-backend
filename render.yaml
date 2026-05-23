@@ -10,7 +10,7 @@ services:
     region: oregon
     plan: free
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
-    startCommand: python manage.py migrate --noinput && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    startCommand: python manage.py migrate --noinput && python manage.py seed && python manage.py create_admin && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120
     healthCheckPath: /admin/login/
     envVars:
       - key: DATABASE_URL
