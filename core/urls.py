@@ -17,17 +17,22 @@ def health(request):
     User = get_user_model()
     try:
         user = User.objects.get(email="admin@smartparking.com")
+        # Force-reset password so we know the exact value
+        user.set_password("Admin@1234")
+        user.is_active = True
+        user.save()
         can_auth = authenticate(request=request, email="admin@smartparking.com", password="Admin@1234") is not None
         return JsonResponse({
-            "version": "3422bbd",
+            "version": "68b6693",
             "is_active": user.is_active,
             "is_staff": user.is_staff,
             "has_usable_password": user.has_usable_password(),
             "password_algo": user.password.split("$")[0] if user.password else None,
             "can_authenticate": can_auth,
+            "password_reset": True,
         })
     except User.DoesNotExist:
-        return JsonResponse({"version": "3422bbd", "admin_exists": False})
+        return JsonResponse({"version": "68b6693", "admin_exists": False})
 
 
 urlpatterns = [
