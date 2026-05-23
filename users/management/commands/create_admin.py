@@ -16,13 +16,18 @@ class Command(BaseCommand):
     help = "Create a default admin user if none exists."
 
     def handle(self, *args, **kwargs):
-        if User.objects.filter(is_staff=True).exists():
-            self.stdout.write("Admin already exists — skipping.")
-            return
-
         email    = os.getenv("ADMIN_EMAIL",    "admin@smartparking.com")
         password = os.getenv("ADMIN_PASSWORD", "Admin@1234")
         name     = os.getenv("ADMIN_NAME",     "System Admin")
 
-        User.objects.create_superuser(email=email, password=password, full_name=name)
-        self.stdout.write(self.style.SUCCESS(f"Admin created: {email}"))
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={"full_name": name, "is_staff": True, "is_superuser": True, "is_active": True},
+        )
+        user.is_staff = True
+        user.is_superuser = True
+        user.is_active = True
+        user.set_password(password)
+        user.save()
+        verb = "created" if created else "updated"
+        self.stdout.write(self.style.SUCCESS(f"Admin {verb}: {email}"))
