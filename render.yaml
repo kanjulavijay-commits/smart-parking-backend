@@ -1,3 +1,8 @@
+databases:
+  - name: smart-parking-db
+    plan: free
+    region: oregon
+
 services:
   - type: web
     name: smart-parking-backend
@@ -9,6 +14,18 @@ services:
     healthCheckPath: /admin/login/
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: smart-parking-db
+          property: connectionString
       - key: PYTHON_VERSION
         value: "3.11.0"
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://smart-parking-frontend-theta.vercel.app"
+      - key: FRONTEND_URL
+        value: "https://smart-parking-frontend-theta.vercel.app"
