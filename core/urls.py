@@ -11,11 +11,23 @@ from users.views import (
 )
 
 def health(request):
-    from django.contrib.auth import get_user_model
+    if not settings.DEBUG:
+        return JsonResponse({"error": "disabled"}, status=403)
+    from django.contrib.auth import get_user_model, authenticate
     User = get_user_model()
-    admin_exists = User.objects.filter(email="admin@smartparking.com").exists()
-    admin_active = User.objects.filter(email="admin@smartparking.com", is_active=True).exists()
-    return JsonResponse({"version": "98b11d0", "admin_exists": admin_exists, "admin_active": admin_active})
+    try:
+        user = User.objects.get(email="admin@smartparking.com")
+        can_auth = authenticate(request=request, email="admin@smartparking.com", password="Admin@1234") is not None
+        return JsonResponse({
+            "version": "3422bbd",
+            "is_active": user.is_active,
+            "is_staff": user.is_staff,
+            "has_usable_password": user.has_usable_password(),
+            "password_algo": user.password.split("$")[0] if user.password else None,
+            "can_authenticate": can_auth,
+        })
+    except User.DoesNotExist:
+        return JsonResponse({"version": "3422bbd", "admin_exists": False})
 
 
 urlpatterns = [
