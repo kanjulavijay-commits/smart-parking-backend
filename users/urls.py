@@ -6,11 +6,11 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register("", UserViewSet, basename="users")
 router.register("roles", RoleViewSet, basename="roles")
 router.register("permissions", PermissionViewSet, basename="permissions")
 router.register("audit-logs", AuditLogViewSet, basename="audit-logs")
 router.register("support", SupportTicketViewSet, basename="support")
+router.register("", UserViewSet, basename="users")
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),

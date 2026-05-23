@@ -29,10 +29,10 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id", "email", "full_name", "phone", "profile_picture",
-            "role", "role_id", "is_active", "is_email_verified",
+            "role", "role_id", "is_active", "is_staff", "is_email_verified",
             "created_at", "updated_at", "last_login_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "last_login_at", "is_email_verified"]
+        read_only_fields = ["id", "is_staff", "created_at", "updated_at", "last_login_at", "is_email_verified"]
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

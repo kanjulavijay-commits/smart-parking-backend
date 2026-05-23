@@ -83,9 +83,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
+import sys
 # ── Database — Supabase PostgreSQL ────────────────────────────
 _db_url = os.getenv("DATABASE_URL", "").replace("?pgbouncer=true", "")
-if _db_url and not _db_url.startswith("postgresql://postgres:[YOUR"):
+if _db_url and not _db_url.startswith("postgresql://postgres:[YOUR") and "test" not in sys.argv:
     DATABASES = {
         "default": dj_database_url.parse(
             _db_url,
@@ -94,7 +95,7 @@ if _db_url and not _db_url.startswith("postgresql://postgres:[YOUR"):
         )
     }
 else:
-    # Falls back to SQLite until Supabase URL is configured in .env
+    # Falls back to SQLite for local development or during unit testing
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",

@@ -190,14 +190,25 @@ def get_payment_summary(user=None):
         avg_transaction=Avg("amount"),
     )
 
+    pending_qs = Payment.objects.filter(status="pending")
+    if user:
+        pending_qs = pending_qs.filter(user=user)
+    pending_stats = pending_qs.aggregate(total_pending=Sum("amount"))
+
     refunds_qs = Payment.objects.filter(status="refunded")
     if user:
         refunds_qs = refunds_qs.filter(user=user)
     refund_stats = refunds_qs.aggregate(total_refunds=Sum("refund_amount"))
 
+    total_collected = float(stats["total_revenue"] or 0)
+    total_transactions = stats["total_transactions"] or 0
+
     return {
-        "total_revenue": float(stats["total_revenue"] or 0),
-        "total_transactions": stats["total_transactions"] or 0,
+        "total_collected": total_collected,
+        "total_revenue": total_collected,
+        "total_payments": total_transactions,
+        "total_transactions": total_transactions,
+        "total_pending": float(pending_stats["total_pending"] or 0),
         "avg_transaction": round(float(stats["avg_transaction"] or 0), 2),
         "total_refunded": float(refund_stats["total_refunds"] or 0),
     }
